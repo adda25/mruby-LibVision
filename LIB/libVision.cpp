@@ -33,7 +33,9 @@ LibVision::LibVision() {
 	this->lbFunctions.insert(std::make_pair("detectCircles", 		&LibVision::detectCircles));
 	this->lbFunctions.insert(std::make_pair("detectPenta", 			&LibVision::detectPenta));
 	this->lbFunctions.insert(std::make_pair("detectExa", 			&LibVision::detectExa));
+	this->lbFunctions.insert(std::make_pair("holdSquarePatterns",	&LibVision::checkSquarePatterns));
 	this->lbFunctions.insert(std::make_pair("holdOnlyRightColored", &LibVision::checkColor));
+	this->lbFunctions.insert(std::make_pair("holdOnlyRigthTexture", &LibVision::checkWithImage));
 	this->lbFunctions.insert(std::make_pair("saveCandidates",	 	&LibVision::saveCandidates));
 	this->lbFunctions.insert(std::make_pair("clearCandidates",	 	&LibVision::clearCandidates));
 	// Lookup table debug functions
@@ -55,6 +57,9 @@ LibVision::~LibVision() {
 }
 
 void LibVision::requireOperations(char* operations[], size_t size) {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("requireOperations");
+	#endif
 	for (uint i = 0; i < (int)size; i++) {
 		if (operations[i] == NULL) {continue;}
 		if (this->lbFunctions[std::string(operations[i])]) {
@@ -93,6 +98,9 @@ void LibVision::loadImageFromMemory() {
 }
 
 void LibVision::preprocessingFrameOTSU() {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("preprocessingFrameOTSU");
+	#endif
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::threshold(lastGrayFrame,
@@ -103,6 +111,9 @@ void LibVision::preprocessingFrameOTSU() {
 }
 
 void LibVision::preprocessingFrameADPT() {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("preprocessingFrameADPT");
+	#endif
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::adaptiveThreshold(lastGrayFrame,
@@ -117,6 +128,12 @@ std::vector <std::vector<cv::Point> > LibVision::findContours(int minContourPoin
     static std::vector<std::vector<cv::Point> > allContours;
 	std::vector <std::vector<cv::Point> > contours;
     allContours.reserve(2000);
+	if (lastThrFrame.rows == 0 || lastThrFrame.cols == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("no threshold frame, call preprocessingFrame_* --> return empty");
+		#endif
+		return contours;
+	}
     cv::Mat thrFrameCopy;
     lastThrFrame.copyTo(thrFrameCopy);
     cv::findContours(thrFrameCopy, allContours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
@@ -173,7 +190,9 @@ inline void LibVision::sortVertices(std::vector<cv::Point>& approxCurve) {
 }
 
 void LibVision::detectSquares() {
-	std::cout << "detecting squares" << std::endl;
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("detectSquares");
+	#endif
 	this->candidates = this->findCandidates(this->findContours(100), 4);
 	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
@@ -181,7 +200,9 @@ void LibVision::detectSquares() {
 }
 
 void LibVision::detectCircles() {
-	std::cout << "detecting circles" << std::endl;
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("detectCircles");
+	#endif
 	this->candidates = this->findCandidates(this->findContours(1), 1000);
 	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
@@ -189,7 +210,9 @@ void LibVision::detectCircles() {
 }
 
 void LibVision::detectPenta() {
-	std::cout << "detecting penta" << std::endl;
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("detectPentagons");
+	#endif
 	this->candidates = this->findCandidates(this->findContours(100), 5);
 	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
@@ -197,11 +220,53 @@ void LibVision::detectPenta() {
 }
 
 void LibVision::detectExa() {
-	std::cout << "detecting exa" << std::endl;
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("detectExagons");
+	#endif
 	this->candidates = this->findCandidates(this->findContours(100), 6);
 	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
 	#endif
+}
+
+void LibVision::checkSquarePatterns() {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("checkSquaresPatterns");
+	#endif
+	if (candidates.size() == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("no candidates, call detectSquares --> exit");
+		#endif
+		return;
+	}
+	if (lbParams->patternImagePath == NULL) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("patternImagePath is NULL --> exit");
+		#endif
+		return;
+	}
+    cv::Mat patternImage = cv::imread(std::string(lbParams->patternImagePath), CV_LOAD_IMAGE_COLOR);
+	if (patternImage.rows == 0 || patternImage.cols == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("impossible to load pattern image --> exit");	
+		#endif
+		return;
+	}
+	for (int i = 0; i < this->candidates.size(); i++) {
+		if (this->candidates[i].size() != 4) {continue;}
+		cv::Mat warpThRoi = this->thresholdAfterWarp(this->getWarpPerspective(lastFrame, candidates[i]));
+		int r = 0;
+		int idM = calcCorrelationCoefficient(warpThRoi, patternImage, &r);
+		if (idM == 1) {
+			// Pattern found
+			#if DEBUG_WITH_IMAGES
+			showImageForDebug(warpThRoi, 3000);
+			#endif
+			#if DEBUG_MODE
+			std::cout << "LibVision::patternFound N --> " << i << std::endl;
+			#endif
+		}
+	}
 }
 
 void LibVision::saveCandidates() {
@@ -222,7 +287,6 @@ void LibVision::saveCandidates() {
 	// Save new data
 	for (int i = 0; i < (int)this->candidates.size(); i++) {
 		int numberOfPointsOfNewPoly = (int)this->candidates[i].size();
-		std::cout << numberOfPointsOfNewPoly << std::endl;
 		lbParams->polygons[i + lbParams->polygonsFounds].polyPoints = (ScreenPoint*)malloc(numberOfPointsOfNewPoly * sizeof (ScreenPoint));
 		if (lbParams->polygons[i + lbParams->polygonsFounds].polyPoints == NULL) {
 			free(lbParams->polygons[i + lbParams->polygonsFounds].polyPoints);
@@ -238,6 +302,9 @@ void LibVision::saveCandidates() {
 }
 
 void LibVision::clearCandidates() {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("clearCandidates");
+	#endif
 	for (int i = 0; i < lbParams->polygonsFounds; i++) {
 		free(lbParams->polygons[i].polyPoints);
 	}
@@ -259,12 +326,29 @@ void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) 
 	#endif
 }
 
+///// REMOVE??
+void LibVision::checkWithImage() {
+	/*std::vector<std::vector<cv::Point> > newCandidates;
+		
+	for(int i = 0; i < this->candidates.size(); i++) {
+		if (checkTextureForRegion(candidates[i], minCol, maxCol)) {
+			newCandidates.push_back(candidates[i]);
+		}
+	}
+	this->candidates = newCandidates;*/
+}
+
+///// REMOVE??
+bool LibVision::checkTextureForRegion(std::vector<cv::Point> candidate) {
+	return false;
+}
+
 void LibVision::checkColor() {
 	std::vector<std::vector<cv::Point> > newCandidates;
 	cv::Scalar minCol = cv::Scalar(lbParams->colorRange[0], lbParams->colorRange[1], lbParams->colorRange[2]);
 	cv::Scalar maxCol = cv::Scalar(lbParams->colorRange[3], lbParams->colorRange[4], lbParams->colorRange[5]);
 	
-	for(int i = 0; i < this->candidates.size(); i++) {
+	for(size_t i = 0; i < this->candidates.size(); i++) {
 		if (checkColorForRegion(candidates[i], minCol, maxCol)) {
 			newCandidates.push_back(candidates[i]);
 		}
@@ -329,6 +413,109 @@ bool LibVision::computeSubRect(std::vector<cv::Point> candidate, cv::Mat& roi) {
 		return true;
 	}			
 	return false;
+}
+
+cv::Mat LibVision::getWarpPerspective(cv::Mat roi, std::vector<cv::Point> candidate) {
+    cv::Point2f pointsRes[4], pointsIn[4];
+    for (int j = 0; j < 4; j++) {
+        pointsIn[j] = candidate[j];
+    }
+	int warpSize = 56;
+    pointsRes[0] = cv::Point2f(0, 0) ;
+    pointsRes[1] = cv::Point2f(warpSize - 1, 0);
+    pointsRes[2] = cv::Point2f(warpSize - 1, warpSize - 1);
+    pointsRes[3] = cv::Point2f(0, warpSize - 1);
+    cv::Mat prsxTrnsf = cv::getPerspectiveTransform(pointsIn, pointsRes);
+    cv::Mat warpRoi;
+    cv::warpPerspective(roi, warpRoi, prsxTrnsf, cv::Size(warpSize, warpSize));
+    return warpRoi;
+}
+
+cv::Mat LibVision::thresholdAfterWarp(cv::Mat roi) {
+    cv::Mat patternCandidatesRoiThresh;
+    cv::threshold(roi,
+                  patternCandidatesRoiThresh,
+                  OTSU_THRESH,
+                  255,
+                  CV_THRESH_BINARY_INV && CV_THRESH_OTSU);
+    /*cv::adaptiveThreshold(markerCandidatesRoi[i], markerCandidatesRoiThresh,
+     255,
+     CV_ADAPTIVE_THRESH_MEAN_C,
+     CV_THRESH_BINARY_INV,
+     45,
+     0);*/
+    cv::bitwise_not(patternCandidatesRoiThresh, patternCandidatesRoiThresh);
+    return patternCandidatesRoiThresh;
+}
+
+int LibVision::calcCorrelationCoefficient(cv::Mat src, cv::Mat img, int* rot) {
+    unsigned int j;
+    int i;
+    double tempsim;
+	int warpSize = 56;
+    double N = (double)(warpSize * warpSize / 4);
+    double nom, den;
+    float confThreshold = 0.9;
+    cv::Scalar mean_ext, std_ext, mean_int, std_int;
+    std::vector<cv::Mat> loadedPatterns;
+    int msize = warpSize;
+    
+    cv::Mat src2(msize, msize, CV_8UC1);
+    cv::Point2f center((msize-1)/2.0f,(msize-1)/2.0f);
+    cv::Mat rot_mat(2,3,CV_32F);
+    cv::resize(img, src2, cv::Size(msize, msize));
+    cv::Mat subImg = src2(cv::Range(msize/4,3*msize/4), cv::Range(msize/4,3*msize/4));
+    loadedPatterns.push_back(subImg);
+    rot_mat = cv::getRotationMatrix2D(center, 90, 1.0);
+    
+    for (int i=1; i<4; i++){
+        cv::Mat dst = cv::Mat(msize, msize, CV_8UC1);
+        rot_mat = cv::getRotationMatrix2D(center, -i*90, 1.0);
+        cv::warpAffine(src2, dst , rot_mat, cv::Size(msize,msize));
+        cv::Mat subImg = dst(cv::Range(msize/4,3*msize/4), cv::Range(msize/4,3*msize/4));
+        loadedPatterns.push_back(subImg);
+    }
+    
+    cv::Mat normROI = cv::Mat(warpSize, warpSize, CV_8UC1); //normalized ROI
+    //Masks for exterior(black) and interior area inside the pattern
+    cv::Mat patMask = cv::Mat::ones(warpSize, warpSize, CV_8UC1);
+    cv::Mat submat = patMask(cv::Range(warpSize / 4, 3 * warpSize / 4), cv::Range(warpSize / 4, 3 * warpSize/4));
+    cv::Mat patMaskInt = cv::Mat::zeros(warpSize, warpSize, CV_8UC1);
+    submat = patMaskInt(cv::Range(warpSize / 4, 3 * warpSize / 4), cv::Range(warpSize / 4, 3 * warpSize / 4));
+    submat = cv::Scalar(1);
+    cv::meanStdDev(src, mean_ext, std_ext, patMask);
+    cv::meanStdDev(src, mean_int, std_int, patMaskInt);
+    if ((mean_ext.val[0]>mean_int.val[0]))
+        return -1;
+    
+    cv::Mat inter = src(cv::Range(warpSize / 4, 3 * warpSize / 4), cv::Range(warpSize / 4, 3 * warpSize / 4));
+    double normSrcSq = pow(norm(inter), 2);
+    int zero_mean_mode = 1;
+    float maxCor = -1.0;
+    //int index = 0;
+    int ori = 0;
+    for (j = 0; j < (loadedPatterns.size() / 4); j++) {
+        for(i = 0; i < 4; i++){
+            double const nnn = pow(norm(loadedPatterns.at(j * 4 + i)), 2);
+            if (zero_mean_mode == 1) {
+                double const mmm = mean(loadedPatterns.at(j * 4 + i)).val[0];
+                nom = inter.dot(loadedPatterns.at(j * 4 + i)) - (N * mean_int.val[0] * mmm);
+                den = sqrt((normSrcSq - (N * mean_int.val[0] * mean_int.val[0])) * (nnn - (N * mmm * mmm)));
+                tempsim = nom/den;
+            } else {
+                tempsim = inter.dot(loadedPatterns.at(j*4+i))/(sqrt(normSrcSq*nnn));
+            }
+            if(tempsim > maxCor){
+                maxCor = tempsim;
+                ori = i;
+            }
+        }
+    }
+    *rot = ori;
+    if (maxCor > confThreshold)
+        return 1;
+    else
+        return 0;
 }
 
 void LibVision::debugPrintPolys() {

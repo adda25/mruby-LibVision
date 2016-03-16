@@ -28,7 +28,10 @@ typedef struct
 	// to analyze
 	char* imagePath;
 	
-	// Always SIX elements.
+	// Path of the image used for check ROI texture
+	char* patternImagePath;
+	
+	// Always _six_ elements.
 	// This is the range used to 
 	// check the color of a candidate.
 	// [MIN_RED, MIN_GREEN, MIN_BLU, MAX_RED, MAX_GREEN, MAX_BLUE] 
@@ -69,13 +72,14 @@ LibVisionParams* newLbParams() {
 	}
 	params->polygons[0].numberOfPoints = 0;
 	params->polygons[0].polyPoints = (ScreenPoint*)malloc(0 * sizeof (ScreenPoint));
-	
+		
     return params;
 }
 	
 #ifdef __cplusplus
 #include <stdlib.h>
 #define OTSU_THRESH 130
+#define DEFAULT_IMAGE_SLEEP_TIME_MS 3000
 #define LIB_VISION_DPRINT(text) printf("LibVision::"text"\n")
 
 /// **LibVision**
@@ -147,9 +151,11 @@ private:
 	void detectCircles();
 	void detectPenta();
 	void detectExa();
+	void checkSquarePatterns();
 	void saveCandidates();
 	void clearCandidates();
 	void checkColor();
+	void checkWithImage();
 	// Debug lbFunctions
 	void debugPrintPolys();
 	//
@@ -159,7 +165,7 @@ private:
 	
 	// In candidates are stored the last candidate
 	// found by the LibVision. A new function call
-	// of type *detect_** overwrite this porperty.
+	// of type *detect_** overwrite this property.
 	// Call the lbFunction *saveCandidates* in order
 	// to save this candidate in the lbParams struct.
 	std::vector<std::vector<cv::Point> > candidates;
@@ -169,13 +175,17 @@ private:
 	inline bool verifyDistance(cv::Point p_o, cv::Point p_t);
 	inline void sortVertices(std::vector<cv::Point>& approxCurve);
 	void drawCandidates(std::vector<std::vector<cv::Point> > candidates);
+	bool checkTextureForRegion(std::vector<cv::Point> candidate);
 	bool checkColorForRegion(std::vector<cv::Point> candidate, 
 								cv::Scalar minColor = cv::Scalar(200, 200, 200),
 								cv::Scalar maxColor = cv::Scalar(210, 210, 210));
 	bool computeSubRect(std::vector<cv::Point> candidate, cv::Mat& roi);
 	void setColorsToCheck(void);
+	int	calcCorrelationCoefficient(cv::Mat src, cv::Mat img, int* rot);
+	cv::Mat	getWarpPerspective(cv::Mat roi, std::vector<cv::Point> candidate);
+	cv::Mat thresholdAfterWarp(cv::Mat roi);
 	
-	void showImageForDebug(cv::Mat image, int time = 3000) {
+	void showImageForDebug(cv::Mat image, int time = DEFAULT_IMAGE_SLEEP_TIME_MS) {
 		cv::namedWindow("test", CV_WINDOW_NORMAL);
 		cv::imshow("test", image);
 		cv::waitKey(time);
