@@ -18,14 +18,34 @@
 
 LibVision::LibVision() {
 	#if DEBUG_MODE
-	std::cout << "LibVision::init" << std::endl;
+	LIB_VISION_DPRINT("init");
 	#endif
-	lbFunctions.insert(std::make_pair("preprocessingOTSU", 	&LibVision::preprocessingFrameOTSU));
-	lbFunctions.insert(std::make_pair("preprocessingADPT", 	&LibVision::preprocessingFrameADPT));
-	lbFunctions.insert(std::make_pair("detectSquares", 		&LibVision::detectSquares));
-	lbFunctions.insert(std::make_pair("detectCircles", 		&LibVision::detectCircles));
-	lbFunctions.insert(std::make_pair("detectPenta", 		&LibVision::detectPenta));
-	lbFunctions.insert(std::make_pair("detectExa", 			&LibVision::detectExa));
+	
+	// Populate lookup table
+	this->lbFunctions.insert(std::make_pair("openCamera", 			&LibVision::openCamera));
+	this->lbFunctions.insert(std::make_pair("closeCamera", 			&LibVision::closeCamera));
+	this->lbFunctions.insert(std::make_pair("acquireFrame", 		&LibVision::acquireFrame));
+	this->lbFunctions.insert(std::make_pair("saveFrame", 			&LibVision::saveFrame));
+	this->lbFunctions.insert(std::make_pair("loadImageFromMem", 	&LibVision::loadImageFromMemory));
+	this->lbFunctions.insert(std::make_pair("preprocessingOTSU", 	&LibVision::preprocessingFrameOTSU));
+	this->lbFunctions.insert(std::make_pair("preprocessingADPT", 	&LibVision::preprocessingFrameADPT));
+	this->lbFunctions.insert(std::make_pair("detectSquares", 		&LibVision::detectSquares));
+	this->lbFunctions.insert(std::make_pair("detectCircles", 		&LibVision::detectCircles));
+	this->lbFunctions.insert(std::make_pair("detectPenta", 			&LibVision::detectPenta));
+	this->lbFunctions.insert(std::make_pair("detectExa", 			&LibVision::detectExa));
+	this->lbFunctions.insert(std::make_pair("holdOnlyRightColored", &LibVision::checkColor));
+	this->lbFunctions.insert(std::make_pair("saveCandidates",	 	&LibVision::saveCandidates));
+	this->lbFunctions.insert(std::make_pair("clearCandidates",	 	&LibVision::clearCandidates));
+	// Lookup table debug functions
+	this->lbFunctions.insert(std::make_pair("printPolygonsFounds",	&LibVision::debugPrintPolys));
+	
+	// Alloc lbParams
+	this->lbParams = newLbParams();
+	if (this->lbParams == NULL) {
+		#if DEBUG_MODE
+		std::cout << "LibVision-> alloc lbParams fails at: " << __LINE__  << std::endl;
+		#endif
+	}
 }
 
 LibVision::~LibVision() {
@@ -34,19 +54,9 @@ LibVision::~LibVision() {
 	#endif
 }
 
-/*
-*	Operations
-*/
-void LibVision::setFramePathname(char* path) {
-	#if DEBUG_MODE
-	std::cout << "LibVision::setFramePathname --> " << path << std::endl;
-	#endif
-    this->lastFrame = cv::imread(std::string(path), CV_LOAD_IMAGE_COLOR);
-}
-
 void LibVision::requireOperations(char* operations[], size_t size) {
-	for(uint i = 0; i < (int)size; i++) {
-		if(operations[i] == NULL) {continue;}
+	for (uint i = 0; i < (int)size; i++) {
+		if (operations[i] == NULL) {continue;}
 		if (this->lbFunctions[std::string(operations[i])]) {
 			LibVisionFunction lvfp = this->lbFunctions[std::string(operations[i])];
 			(this->*lvfp)();
@@ -54,7 +64,35 @@ void LibVision::requireOperations(char* operations[], size_t size) {
 	}	
 }
 
-void LibVision::preprocessingFrameOTSU(void) {
+/*
+*	Operations
+*/
+
+void LibVision::openCamera() {
+	
+}
+
+void LibVision::closeCamera() {
+	
+}
+
+void LibVision::acquireFrame() {
+	
+}
+
+void LibVision::saveFrame() {
+	
+}
+
+void LibVision::loadImageFromMemory() {
+	#if DEBUG_MODE
+	std::cout << "LibVision::setFramePathname --> " << lbParams->imagePath << std::endl;
+	#endif
+	if (lbParams->imagePath == NULL) {return;}
+    this->lastFrame = cv::imread(std::string(lbParams->imagePath), CV_LOAD_IMAGE_COLOR);
+}
+
+void LibVision::preprocessingFrameOTSU() {
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::threshold(lastGrayFrame,
@@ -64,7 +102,7 @@ void LibVision::preprocessingFrameOTSU(void) {
                   CV_THRESH_BINARY_INV && CV_THRESH_OTSU);
 }
 
-void LibVision::preprocessingFrameADPT(void) {
+void LibVision::preprocessingFrameADPT() {
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::adaptiveThreshold(lastGrayFrame,
@@ -134,28 +172,77 @@ inline void LibVision::sortVertices(std::vector<cv::Point>& approxCurve) {
     }
 }
 
-void LibVision::detectSquares(void) {
+void LibVision::detectSquares() {
 	std::cout << "detecting squares" << std::endl;
 	this->candidates = this->findCandidates(this->findContours(100), 4);
+	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
+	#endif
 }
 
-void LibVision::detectCircles(void) {
+void LibVision::detectCircles() {
 	std::cout << "detecting circles" << std::endl;
 	this->candidates = this->findCandidates(this->findContours(1), 1000);
+	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
+	#endif
 }
 
-void LibVision::detectPenta(void) {
+void LibVision::detectPenta() {
 	std::cout << "detecting penta" << std::endl;
 	this->candidates = this->findCandidates(this->findContours(100), 5);
+	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
+	#endif
 }
 
-void LibVision::detectExa(void) {
+void LibVision::detectExa() {
 	std::cout << "detecting exa" << std::endl;
 	this->candidates = this->findCandidates(this->findContours(100), 6);
+	#if DEBUG_WITH_IMAGES
 	this->drawCandidates(this->candidates);
+	#endif
+}
+
+void LibVision::saveCandidates() {
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("saveCandidates");
+	#endif
+	// Calc new current lbParams Polygons size
+	int newSize = lbParams->polygonsFounds + (int)this->candidates.size();
+	// Alloc new size
+	if (lbParams->polygonsFounds == 0) {
+		lbParams->polygons = (Polygon*)malloc(newSize * sizeof (Polygon));
+	} else {
+		lbParams->polygons = (Polygon*)realloc(lbParams->polygons, newSize * sizeof (Polygon));
+	}
+	if (lbParams->polygons == NULL) {
+		free(lbParams->polygons);
+	}
+	// Save new data
+	for (int i = 0; i < (int)this->candidates.size(); i++) {
+		int numberOfPointsOfNewPoly = (int)this->candidates[i].size();
+		std::cout << numberOfPointsOfNewPoly << std::endl;
+		lbParams->polygons[i + lbParams->polygonsFounds].polyPoints = (ScreenPoint*)malloc(numberOfPointsOfNewPoly * sizeof (ScreenPoint));
+		if (lbParams->polygons[i + lbParams->polygonsFounds].polyPoints == NULL) {
+			free(lbParams->polygons[i + lbParams->polygonsFounds].polyPoints);
+		}
+		lbParams->polygons[i + lbParams->polygonsFounds].numberOfPoints = numberOfPointsOfNewPoly;
+		for (int j = 0; j < numberOfPointsOfNewPoly; j++) {
+			lbParams->polygons[i + lbParams->polygonsFounds].polyPoints[j].x = this->candidates[i][j].x;
+			lbParams->polygons[i + lbParams->polygonsFounds].polyPoints[j].y = this->candidates[i][j].y;
+		}
+	}
+	// Save new state
+	lbParams->polygonsFounds = newSize;
+}
+
+void LibVision::clearCandidates() {
+	for (int i = 0; i < lbParams->polygonsFounds; i++) {
+		free(lbParams->polygons[i].polyPoints);
+	}
+	free(lbParams->polygons);
+	lbParams->polygonsFounds = 0;
 }
 
 void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) {
@@ -167,17 +254,25 @@ void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) 
 		}
 		cv::line(frameCopy, candidates[i][candidates[i].size() - 1], candidates[i][0], cv::Scalar(0, 0, 255), 2);
 	}
+	#if DEBUG_WITH_IMAGES
 	showImageForDebug(frameCopy);
+	#endif
+}
+
+void LibVision::checkColor() {
 	std::vector<std::vector<cv::Point> > newCandidates;
+	cv::Scalar minCol = cv::Scalar(lbParams->colorRange[0], lbParams->colorRange[1], lbParams->colorRange[2]);
+	cv::Scalar maxCol = cv::Scalar(lbParams->colorRange[3], lbParams->colorRange[4], lbParams->colorRange[5]);
+	
 	for(int i = 0; i < this->candidates.size(); i++) {
-		if (checkColor(candidates[i])) {
+		if (checkColorForRegion(candidates[i], minCol, maxCol)) {
 			newCandidates.push_back(candidates[i]);
 		}
 	}
 	this->candidates = newCandidates;
 }
 
-bool LibVision::checkColor(std::vector<cv::Point> candidate, cv::Scalar minColor, cv::Scalar maxColor) {
+bool LibVision::checkColorForRegion(std::vector<cv::Point> candidate, cv::Scalar minColor, cv::Scalar maxColor) {
     unsigned int colors[3];
     unsigned int *c = colors;
     cv::Mat frameWithColor;
@@ -187,6 +282,7 @@ bool LibVision::checkColor(std::vector<cv::Point> candidate, cv::Scalar minColor
 	if (!computeSubRect(candidate, subframe)) {
 		return false;
 	}
+	if(subframe.cols == 0 || subframe.rows == 0) {return false;}
 	cv::inRange(subframe, minColor, maxColor, frameWithColor);
 	cv::split(frameWithColor, channels);
 	cv::minMaxLoc(channels[0], NULL, NULL, NULL, &pMaxR);	
@@ -195,7 +291,9 @@ bool LibVision::checkColor(std::vector<cv::Point> candidate, cv::Scalar minColor
 	*(c + 1) 	= static_cast<int>(intensity.val[1]);
 	*(c + 2) 	= static_cast<int>(intensity.val[2]);
 	if (*(c) == 255 &&*(c + 1) == 255 && *(c + 2) == 255 ) {
+		#if DEBUG_WITH_IMAGES
 		showImageForDebug(subframe, 500);
+		#endif
 		return true;
 	} 
 	return false;
@@ -208,33 +306,41 @@ bool LibVision::computeSubRect(std::vector<cv::Point> candidate, cv::Mat& roi) {
 	const float _MAX_X          = lastFrame.cols - _SIDE_PLUS;
 	const float _MIN_Y          = _SIDE_PLUS;
 	const float _MAX_Y          = lastFrame.rows - _SIDE_PLUS;	
-	//for (int s = 0; s < candidates.size(); s++) {
-		//for (size_t c = 0; c < candidates[s].size(); c++) {
-	    	int xMin = 0, xMax = 0, yMin = 0, yMax = 0;
-			float x_corners[candidate.size()];
-			float y_corners[candidate.size()];
-			for (size_t c = 0; c < candidate.size(); c++) {
-				x_corners[c] = candidate[c].x;
-				y_corners[c] = candidate[c].y;
-			}
-	        std::qsort(y_corners, 4, sizeof(int), LibVision::compare);
-			std::qsort(x_corners, 4, sizeof(int), LibVision::compare);
-	        xMin = x_corners[0] - _SIDE_PLUS_2;
-	        xMax = x_corners[3] + _SIDE_PLUS_2;
-	        yMin = y_corners[0] - _SIDE_PLUS_2;
-	        yMax = y_corners[3] + _SIDE_PLUS_2;
-	        if (xMin > _MIN_X  && xMax < _MAX_X  && yMin > _MIN_Y  && yMax < _MAX_Y){
-	        	if (xMax < xMin || yMax < yMin) {
-	            	std::cout << "Error in subrect" << std::endl;
-	                return false;
-	            }
-	            cv::Mat roiD = lastFrame(cv::Rect(xMin, yMin, xMax - xMin, yMax - yMin));
-				roiD.copyTo(roi);
-				return true;
-	    	}
-	   //}
-	//}			
+	int xMin = 0, xMax = 0, yMin = 0, yMax = 0;
+	float x_corners[candidate.size()];
+	float y_corners[candidate.size()];
+	for (size_t c = 0; c < candidate.size(); c++) {
+		x_corners[c] = candidate[c].x;
+		y_corners[c] = candidate[c].y;
+	}
+	std::qsort(y_corners, 4, sizeof(int), LibVision::compare);
+	std::qsort(x_corners, 4, sizeof(int), LibVision::compare);
+	xMin = x_corners[0] - _SIDE_PLUS_2;
+	xMax = x_corners[3] + _SIDE_PLUS_2;
+	yMin = y_corners[0] - _SIDE_PLUS_2;
+	yMax = y_corners[3] + _SIDE_PLUS_2;
+	if (xMin > _MIN_X  && xMax < _MAX_X  && yMin > _MIN_Y  && yMax < _MAX_Y){
+		if (xMax < xMin || yMax < yMin) {
+			std::cout << "Error in subrect" << std::endl;
+			return false;
+		}
+		cv::Mat roiD = lastFrame(cv::Rect(xMin, yMin, xMax - xMin, yMax - yMin));
+		roiD.copyTo(roi);
+		return true;
+	}			
 	return false;
+}
+
+void LibVision::debugPrintPolys() {
+	printf("LibVision::polygonsFounds: %d \n", lbParams->polygonsFounds);
+	for (int i = 0; i < lbParams->polygonsFounds; i++) {
+		printf("-> Number of vertex: %d \n", lbParams->polygons[i].numberOfPoints);		
+		for (int j = 0; j < lbParams->polygons[i].numberOfPoints; j++) {
+			printf("--> Polygon index: %d vertexIndex: %d   \t x: %d \t y: %d \n", i, j, 
+				lbParams->polygons[i].polyPoints[j].x, lbParams->polygons[i].polyPoints[j].y);
+		}
+		printf("\n");
+	}
 }
 
 void LibVision::testInterface() {
@@ -266,13 +372,12 @@ void CLibVision_testInterface(CLibVision_ptr rl) {
 	LIB_VISION_CLASS(rl)->testInterface(); 
 }
 
-///////
-void CLibVision_setFramePath(CLibVision_ptr rl, char* path) {
-	LIB_VISION_CLASS(rl)->setFramePathname(path); 
-}
-
 void CLibVision_requireOperations(CLibVision_ptr rl, char* operations[], size_t size) {
 	LIB_VISION_CLASS(rl)->requireOperations(operations, size);
+}
+
+LibVisionParams* CLibVision_params(CLibVision_ptr rl) {
+	return LIB_VISION_CLASS(rl)->lbParams;
 }
 
 
