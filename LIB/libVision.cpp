@@ -37,11 +37,16 @@ LibVision::LibVision() {
 	this->lbFunctions.insert(std::make_pair("detectExa", 			&LibVision::detectExa));
 	this->lbFunctions.insert(std::make_pair("holdSquarePatterns",	&LibVision::checkSquarePatterns));
 	this->lbFunctions.insert(std::make_pair("holdOnlyRightColored", &LibVision::checkColor));
-	this->lbFunctions.insert(std::make_pair("holdOnlyRigthTexture", &LibVision::checkWithImage));
 	this->lbFunctions.insert(std::make_pair("saveCandidates",	 	&LibVision::saveCandidates));
 	this->lbFunctions.insert(std::make_pair("clearCandidates",	 	&LibVision::clearCandidates));
 	// Lookup table debug functions
 	this->lbFunctions.insert(std::make_pair("printPolygonsFounds",	&LibVision::debugPrintPolys));
+	this->lbFunctions.insert(std::make_pair("printMethods",			&LibVision::debugPrintMethods));
+	
+	// Print available functions
+	#if SHOW_INFO
+	this->debugPrintMethods();
+	#endif
 	
 	// Alloc lbParams
 	this->lbParams = newLbParams();
@@ -52,16 +57,7 @@ LibVision::LibVision() {
 	}
 	
 	// Set Raspberry camera
-	bool available = false;
-	this->camera = new raspicam::RaspiCam_Cv();
-	available = this->camera->open();
-	#if DEBUG_MODE
-	if (available) {
-		LIB_VISION_DPRINT("camera is available");
-	} else {
-		LIB_VISION_DPRINT("camera is not available");
-	}
-	#endif
+	this->lbParams->cameraIsAvailable = FALSE;
 }
 
 LibVision::~LibVision() {
@@ -88,34 +84,83 @@ void LibVision::requireOperations(char* operations[], size_t size) {
 */
 
 void LibVision::openCamera() {
-	
+	this->camera = new raspicam::RaspiCam_Cv();
+	#if DEBUG_MODE
+	if (this->camera->open()) {
+		this->lbParams->cameraIsAvailable = TRUE;
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("openCamera -> camera is available");
+		#endif
+	} else {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("openCamera -> camera is not available");
+		#endif
+	}
+	#endif
 }
 
 void LibVision::closeCamera() {
-	
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("closeCamera");
+	#endif
+	if (this->lbParams->cameraIsAvailable == TRUE) {
+		this->camera->release();
+	}
 }
 
 void LibVision::acquireFrame() {
-	
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("acquireFrame");
+	#endif
+	if (this->lbParams->cameraIsAvailable == FALSE) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("acquireFrame --> camera is not available");
+		#endif
+		return;
+	}
+	this->camera->grab();
+	this->camera->retrieve(this->lastFrame);
 }
 
 void LibVision::saveFrame() {
-	
+	#if DEBUG_MODE
+	LIB_VISION_DPRINT("saveFrame is not implemented yet");
+	#endif
+	/*if (_rect) {
+	 cv::rectangle(_lastFrame, cv::Point(_rect->x0, _rect->y0), cv::Point(_rect->x1, _rect->y1), cv::Scalar(0, 255, 0));
+	  }
+	 imwrite(name, _lastFrame);*/
 }
 
 void LibVision::loadImageFromMemory() {
 	#if DEBUG_MODE
 	std::cout << "LibVision::setFramePathname --> " << lbParams->imagePath << std::endl;
 	#endif
-	if (lbParams->imagePath == NULL) {return;}
+	if (lbParams->imagePath == NULL) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("loadImageFromMemory --> imagepath is NULL");
+		#endif
+		return;
+	}
     this->lastFrame = cv::imread(std::string(lbParams->imagePath), CV_LOAD_IMAGE_COLOR);
+	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("loadImageFromMemory --> loaded image is empty");
+		#endif
+		return;
+	}
 }
 
 void LibVision::preprocessingFrameOTSU() {
 	#if DEBUG_MODE
 	LIB_VISION_DPRINT("preprocessingFrameOTSU");
 	#endif
-	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
+	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("preprocessingFrameOTSU -> lastFrame is empty");
+		#endif
+		return;
+	}
 	if(lbParams->otsuThresh < 0 || lbParams->otsuThresh > 255) {
 		lbParams->otsuThresh = DEFAULT_OTSU_THRESH;
 	}
@@ -131,7 +176,12 @@ void LibVision::preprocessingFrameADPT() {
 	#if DEBUG_MODE
 	LIB_VISION_DPRINT("preprocessingFrameADPT");
 	#endif
-	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
+	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("preprocessingFrameADPT -> lastFrame is empty");
+		#endif
+		return;
+	}
 	if(lbParams->adptThreshSize < 3) {
 		lbParams->adptThreshSize = DEFAULT_ADPT_SIZE;
 	}
@@ -338,6 +388,9 @@ void LibVision::clearCandidates() {
 
 void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) {
     cv::Mat frameCopy;
+	if (this->lastFrame.rows == 0 || this->lastFrame.cols == 0) {
+		return;
+	}
     this->lastFrame.copyTo(frameCopy);
 	for(int i = 0; i < candidates.size(); i++) {
 		for(int j = 0; j < candidates[i].size() - 1; j++) {
@@ -545,6 +598,13 @@ void LibVision::debugPrintPolys() {
 				lbParams->polygons[i].polyPoints[j].x, lbParams->polygons[i].polyPoints[j].y);
 		}
 		printf("\n");
+	}
+}
+
+void LibVision::debugPrintMethods() {
+	LIB_VISION_DPRINT("list of available functions");
+	for(std::map<std::string, LibVisionFunction>::iterator it = lbFunctions.begin(); it != lbFunctions.end(); ++it) {
+		std::cout << "--> " << it->first << "\n";
 	}
 }
 

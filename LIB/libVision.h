@@ -1,9 +1,20 @@
+#ifndef SHOW_INFO
+#define SHOW_INFO 1
+#endif
 #ifndef DEBUG_MODE
 #define DEBUG_MODE 1
 #endif
 #ifndef DEBUG_WITH_IMAGES
 #define DEBUG_WITH_IMAGES 1
 #endif
+
+//////////////////////////////
+// Is not the best solution,//
+// but is handy for mruby	//
+typedef int BOOL;			//
+#define TRUE 	1			//
+#define FALSE 	0			//
+//////////////////////////////
 
 typedef struct {
 	int x;
@@ -20,11 +31,17 @@ typedef struct {
 /// custom functions paramaters
 typedef struct
 {
-	// Real time camera acqusition
-	// frame size
 	int cameraFrameSize[2];
 	
-	// Thresholds for preprocessing
+	// Flags -> BOOL is a typedef int
+	// You can use both the macros TRUE / FALSE
+	// or integer values 0 / 1.
+	// [Correctness of integer values is NOT checked, 
+	// is your own to use only 0 or 1]
+	BOOL cameraIsAvailable;
+	
+	// Thresholds for preprocessing 
+	// [Correctness of values is checked]
 	int otsuThresh; 	// [0 - 255] 
 	int adptThreshSize;	// [3 - INT_MAX_SIZE]
 	int adptThreshMean;	// [INT_MIN_SIZE - INT_MAX_SIZE];
@@ -32,7 +49,6 @@ typedef struct
 	// Path of the static image
 	// to analyze
 	char* imagePath;
-	
 	// Path of the image used for check ROI texture
 	char* patternImagePath;
 	
@@ -170,6 +186,7 @@ private:
 	void checkWithImage();
 	// Debug lbFunctions
 	void debugPrintPolys();
+	void debugPrintMethods();
 	//
 	raspicam::RaspiCam_Cv* camera;
 	//
@@ -177,7 +194,7 @@ private:
 	cv::Mat lastGrayFrame;
 	cv::Mat lastThrFrame;
 	
-	// In candidates are stored the last candidate
+	// In candidates is stored the last candidate
 	// found by the LibVision. A new function call
 	// of type *detect_** overwrite this property.
 	// Call the lbFunction *saveCandidates* in order
