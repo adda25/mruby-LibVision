@@ -3,6 +3,8 @@
 #include <string>
 #include <map>
 #include <opencv2/opencv.hpp>
+#include <raspicam/raspicam_cv.h>
+#include <raspicam/raspicam.h>
 #include "libVision.h"
 #include <stdio.h>
 
@@ -48,6 +50,18 @@ LibVision::LibVision() {
 		std::cout << "LibVision-> alloc lbParams fails at: " << __LINE__  << std::endl;
 		#endif
 	}
+	
+	// Set Raspberry camera
+	bool available = false;
+	this->camera = new raspicam::RaspiCam_Cv();
+	available = this->camera->open();
+	#if DEBUG_MODE
+	if (available) {
+		LIB_VISION_DPRINT("camera is available");
+	} else {
+		LIB_VISION_DPRINT("camera is not available");
+	}
+	#endif
 }
 
 LibVision::~LibVision() {
@@ -102,10 +116,13 @@ void LibVision::preprocessingFrameOTSU() {
 	LIB_VISION_DPRINT("preprocessingFrameOTSU");
 	#endif
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
+	if(lbParams->otsuThresh < 0 || lbParams->otsuThresh > 255) {
+		lbParams->otsuThresh = DEFAULT_OTSU_THRESH;
+	}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::threshold(lastGrayFrame,
                   lastThrFrame,
-      			  OTSU_THRESH,
+      			  lbParams->otsuThresh,
    				  255,
                   CV_THRESH_BINARY_INV && CV_THRESH_OTSU);
 }
@@ -115,13 +132,17 @@ void LibVision::preprocessingFrameADPT() {
 	LIB_VISION_DPRINT("preprocessingFrameADPT");
 	#endif
 	if(this->lastFrame.cols == 0 || this->lastFrame.rows == 0) {return;}
+	if(lbParams->adptThreshSize < 3) {
+		lbParams->adptThreshSize = DEFAULT_ADPT_SIZE;
+	}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::adaptiveThreshold(lastGrayFrame,
                           lastThrFrame,
                           255,
                           CV_ADAPTIVE_THRESH_MEAN_C,
                           CV_THRESH_BINARY_INV,
-                          7, 7);
+                          lbParams->adptThreshSize, 
+						  lbParams->adptThreshMean);
 }
 
 std::vector <std::vector<cv::Point> > LibVision::findContours(int minContourPointsAllowed) {
@@ -252,6 +273,7 @@ void LibVision::checkSquarePatterns() {
 		#endif
 		return;
 	}
+	std::vector<std::vector<cv::Point> > newCandidates;
 	for (int i = 0; i < this->candidates.size(); i++) {
 		if (this->candidates[i].size() != 4) {continue;}
 		cv::Mat warpThRoi = this->thresholdAfterWarp(this->getWarpPerspective(lastFrame, candidates[i]));
@@ -259,6 +281,7 @@ void LibVision::checkSquarePatterns() {
 		int idM = calcCorrelationCoefficient(warpThRoi, patternImage, &r);
 		if (idM == 1) {
 			// Pattern found
+			newCandidates.push_back(this->candidates[i]);
 			#if DEBUG_WITH_IMAGES
 			showImageForDebug(warpThRoi, 3000);
 			#endif
@@ -267,6 +290,7 @@ void LibVision::checkSquarePatterns() {
 			#endif
 		}
 	}
+	this->candidates = newCandidates;
 }
 
 void LibVision::saveCandidates() {
@@ -435,15 +459,9 @@ cv::Mat LibVision::thresholdAfterWarp(cv::Mat roi) {
     cv::Mat patternCandidatesRoiThresh;
     cv::threshold(roi,
                   patternCandidatesRoiThresh,
-                  OTSU_THRESH,
+                  DEFAULT_OTSU_THRESH,
                   255,
                   CV_THRESH_BINARY_INV && CV_THRESH_OTSU);
-    /*cv::adaptiveThreshold(markerCandidatesRoi[i], markerCandidatesRoiThresh,
-     255,
-     CV_ADAPTIVE_THRESH_MEAN_C,
-     CV_THRESH_BINARY_INV,
-     45,
-     0);*/
     cv::bitwise_not(patternCandidatesRoiThresh, patternCandidatesRoiThresh);
     return patternCandidatesRoiThresh;
 }

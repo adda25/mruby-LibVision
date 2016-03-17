@@ -24,6 +24,11 @@ typedef struct
 	// frame size
 	int cameraFrameSize[2];
 	
+	// Thresholds for preprocessing
+	int otsuThresh; 	// [0 - 255] 
+	int adptThreshSize;	// [3 - INT_MAX_SIZE]
+	int adptThreshMean;	// [INT_MIN_SIZE - INT_MAX_SIZE];
+	
 	// Path of the static image
 	// to analyze
 	char* imagePath;
@@ -73,13 +78,20 @@ LibVisionParams* newLbParams() {
 	params->polygons[0].numberOfPoints = 0;
 	params->polygons[0].polyPoints = (ScreenPoint*)malloc(0 * sizeof (ScreenPoint));
 		
+	// Default params
+	params->otsuThresh 		= 130;
+	params->adptThreshSize 	= 7;
+	params->adptThreshMean 	= 7;
+	
     return params;
 }
 	
 #ifdef __cplusplus
 #include <stdlib.h>
-#define OTSU_THRESH 130
 #define DEFAULT_IMAGE_SLEEP_TIME_MS 3000
+#define DEFAULT_OTSU_THRESH 130
+#define DEFAULT_ADPT_SIZE	7
+#define DEFAULT_ADPT_MEAN	7
 #define LIB_VISION_DPRINT(text) printf("LibVision::"text"\n")
 
 /// **LibVision**
@@ -158,6 +170,8 @@ private:
 	void checkWithImage();
 	// Debug lbFunctions
 	void debugPrintPolys();
+	//
+	raspicam::RaspiCam_Cv* camera;
 	//
 	cv::Mat lastFrame;
 	cv::Mat lastGrayFrame;

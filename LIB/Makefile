@@ -1,6 +1,6 @@
 CC = gcc # C compiler
 CPP = g++ # C compiler
-CFLAGS = -fPIC -Wall -g # C flags
+CFLAGS = -fPIC -Wall -g -std=C++11# C flags
 DEFINES = -D RASPICAM
 LDFLAGS = -shared # linking flags
 RM = rm -f  # rm command
@@ -11,7 +11,7 @@ TEST_PGM = test
 
 INCLUDES = -I/usr/include/opencv -I/usr/include/opencv2
 LIB_PATHS = -L/usr/local/opencv/lib
-LIBS = -lopencv_features2d -lopencv_calib3d -lopencv_ml -lopencv_video -lopencv_legacy -lopencv_objdetect -lopencv_photo -lopencv_imgproc -lopencv_core
+LIBS = -lraspicam -lraspicam_cv -lopencv_features2d -lopencv_calib3d -lopencv_ml -lopencv_video -lopencv_legacy -lopencv_objdetect -lopencv_photo -lopencv_imgproc -lopencv_core
 
 SRCS = libVision.cpp # source files
 OBJS = $(SRCS:.cpp=.o)
@@ -43,4 +43,4 @@ clobber:
 install: $(TARGET_LIB)
 	install -m 0755 $(TARGET_LIB) /usr/local/lib
 	ldconfig
-	ldconfig -p | grep Laser
+	ldconfig -p | grep Vision
