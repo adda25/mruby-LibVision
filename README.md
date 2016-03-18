@@ -30,6 +30,7 @@ lb.get_value4key(["polygonsFounds"])
 ```
 
 type: 
+```ruby
 lb.execute(["printMethods"])
 ```
 for a list of the available functions.
