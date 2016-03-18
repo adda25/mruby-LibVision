@@ -2,8 +2,7 @@
 *LibVision* is an mruby gem for computer vision operations
 on frames grabs from the Raspberry camera.
 
-##Compile the C++the shared library 
-Instructions are inside the 
+##Compile the C++ shared library 
 ```sh
 cd lib; make
 sudo make install
@@ -18,7 +17,7 @@ make clean
 In order to work on static image loaded from memory:
 ```ruby
 lb = LibVision.new()
-lb.set_value4key(["imagePath", "*yourAbsolutePathToImage*"])
+lb.set_value4key(["imagePath", *"yourAbsolutePathToImage"*])
 lb.execute(["loadImageFromMem", "preprocessingADPT", "detectSquares", "saveCandidates"])
 lb.get_value4key(["polygonsFounds"])
 ```
@@ -26,7 +25,7 @@ or in order to use the Raspberry camera:
 
 ```ruby
 lb = LibVision.new()
-lb.execute(["openCamera", "preprocessingADPT", "detectCircles", "holdOnlyRightColored", "saveCandidates"])
+lb.execute(["openCamera","acquireFrame", "preprocessingADPT", "detectCircles", "holdOnlyRightColored", "saveCandidates"])
 lb.get_value4key(["polygonsFounds"])
 ```
 
