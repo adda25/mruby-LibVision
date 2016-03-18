@@ -29,7 +29,10 @@ lb.execute(["openCamera","acquireFrame", "preprocessingADPT", "detectCircles", "
 lb.get_value4key(["polygonsFounds"])
 ```
 
-type *lb.execute(["printMethods"])* for a list of the available functions.
+type: 
+lb.execute(["printMethods"])
+```
+for a list of the available functions.
 
 ##Dependencies
 This gem require OpenCV and the Raspicam library from: http://www.uco.es/investiga/grupos/ava/node/40
