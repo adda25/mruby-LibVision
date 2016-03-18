@@ -103,17 +103,16 @@ static mrb_value mrb_libvision_initialize(mrb_state *mrb, mrb_value self) {
 
 static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
 	mrb_value ary_in = mrb_nil_value();
-	mrb_int size;
 	libvision_data_s *p_data = NULL;
-	mrb_get_args(mrb, "A|i", &ary_in, &size);
+	mrb_get_args(mrb, "A", &ary_in);
 
 	// call utility for unwrapping @data into p_data:
     mrb_libvision_get_data(mrb, self, &p_data); 
 	
-	//int arr_size = RARRAY_LEN(ary_in);
+	int arr_size = RARRAY_LEN(ary_in);
 	//p_data->ary = (double *)malloc(sizeof(double) * p_data->i);
-	char* functions[size];
-	for (int i = 0; i < size; i++) {
+	char* functions[arr_size];
+	for (int i = 0; i < arr_size; i++) {
 		mrb_value elem = mrb_ary_entry(ary_in, i);
 	    if (mrb_string_p(elem)) {
 	    	functions[i] = mrb_str_to_cstr(mrb, elem);
@@ -122,7 +121,7 @@ static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
   	   	}
 	}
 	
-  	CLibVision_requireOperations(p_data->libvision, functions, size);
+  	CLibVision_requireOperations(p_data->libvision, functions, arr_size);
 	return self;
 }
 
@@ -132,47 +131,158 @@ static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
 | |_) / _` | '__/ _` | '_ ` _ \/ __\___ \| __| '__| | | |/ __| __|
 |  __/ (_| | | | (_| | | | | | \__ \___) | |_| |  | |_| | (__| |_ 
 |_|   \__,_|_|  \__,_|_| |_| |_|___/____/ \__|_|   \__,_|\___|\__|
-                                                                  
-*/
-mrb_value mrb_params_init(mrb_state *mrb, mrb_value self);
-mrb_value mrb_params_otsuThresh(mrb_state *mrb, mrb_value self);
-mrb_value mrb_params_adptThreshSize(mrb_state *mrb, mrb_value self);
-
-#define IV_GET(name) mrb_iv_get(mrb, self, mrb_intern_cstr(mrb, (name)))
-#define IV_SET(name, value) mrb_iv_set(mrb, self, mrb_intern_cstr(mrb, (name)), value)
-
-static void params_free(mrb_state *mrb, void *p) {
-	if (p != NULL) {
-   		free(p);
-  	}
+                         
+*/                                         
+static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self) {
+	mrb_value ary_in = mrb_nil_value();
+	
+	libvision_data_s *p_data = NULL;
+	mrb_get_args(mrb, "A", &ary_in);
+	mrb_libvision_get_data(mrb, self, &p_data); 
+	
+	// Fetch key
+	char *key;
+	mrb_value elem = mrb_ary_entry(ary_in, 0);
+    if (mrb_string_p(elem)) {
+		key = mrb_str_to_cstr(mrb, elem);
+	} else {
+		return self;
+	}
+	
+	// Fetch values
+	if (strcmp(key, "imagePath") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_string_p(mvalue)) {
+			char* value = mrb_str_to_cstr(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->imagePath = value;	
+		}
+	} 
+	else if (strcmp(key, "patternImagePath") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_string_p(mvalue)) {
+			char* value = mrb_str_to_cstr(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->patternImagePath = value;	
+		}
+	} 
+	else if (strcmp(key, "colorRange") == 0) {
+		int arr_size = RARRAY_LEN(ary_in);
+		if (arr_size > 7) {
+			return self;
+		}
+		for (int i = 1; i < arr_size; i++) {
+			mrb_value elem = mrb_ary_entry(ary_in, i);
+		    if (mrb_fixnum_p(elem)) {
+				CLibVision_params(p_data->libvision)->colorRange[i-1] = mrb_to_flo(mrb, elem);; 
+			}	
+		}
+	} 
+	else if (strcmp(key, "cameraFrameSize") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_fixnum_p(mvalue)) {
+			mrb_int value = mrb_to_flo(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->cameraFrameSize[0] = (int)value;	
+		}
+	    mvalue = mrb_ary_entry(ary_in, 2);
+	   	if (mrb_fixnum_p(mvalue)) {
+	   		mrb_int value = mrb_to_flo(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->cameraFrameSize[1] = (int)value;	
+	   	}
+	}
+	else if (strcmp(key, "otsuThresh") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_fixnum_p(mvalue)) {
+			mrb_int value = mrb_to_flo(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->otsuThresh = (int)value;	
+		}
+	}
+	else if (strcmp(key, "adptThreshSize") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_fixnum_p(mvalue)) {
+			mrb_int value = mrb_to_flo(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->adptThreshSize = (int)value;	
+		}
+	}
+	else if (strcmp(key, "adptThreshMean") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_fixnum_p(mvalue)) {
+			mrb_int value = mrb_to_flo(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->adptThreshMean = (int)value;	
+		}
+	}
+	return self;
 }
 
-static struct mrb_data_type mrb_params_type = {"Params", params_free};
-													  
-mrb_value mrb_params_init(mrb_state *mrb, mrb_value self) {
-  	mrb_int val_otsu;
-  	mrb_int val_adptSize;
-  	LibVisionParams *params;
-  	params = calloc(1, sizeof(params));
-  
-  	mrb_get_args(mrb, "ii", &val_otsu, &val_adptSize);
-  	params->otsuThresh = (int)val_otsu;  
-  	params->adptThreshSize = (int)val_adptSize;
+static mrb_value mrb_libvision_get_value_for_key(mrb_state *mrb, mrb_value self) {
+	mrb_value ary_in;
+	libvision_data_s *p_data = NULL;
+	mrb_get_args(mrb, "A", &ary_in); // TODO: Switch to string
+	mrb_libvision_get_data(mrb, self, &p_data); 
 
-  	mrb_data_init(self, params, &mrb_params_type);
-  	return self;
-}
-
-mrb_value mrb_params_otsuThresh(mrb_state *mrb, mrb_value self) {
-  	LibVisionParams *params;
-  	params = DATA_GET_PTR(mrb, self, &mrb_params_type, LibVisionParams);
-  	return mrb_fixnum_value(params->otsuThresh);
-}
-
-mrb_value mrb_params_adptThreshSize(mrb_state *mrb, mrb_value self) {
-  	LibVisionParams *params;
-  	params = DATA_GET_PTR(mrb, self, &mrb_params_type, LibVisionParams);
-  	return mrb_fixnum_value(params->adptThreshSize);
+	// Fetch key
+	char *key;
+	mrb_value elem = mrb_ary_entry(ary_in, 0);
+    if (mrb_string_p(elem)) {
+		key = mrb_str_to_cstr(mrb, elem);
+	} else {
+		return self;
+	}
+	
+	// Fetch values
+	if (strcmp(key, "imagePath") == 0) {
+		mrb_value ot = mrb_str_new_cstr(mrb, CLibVision_params(p_data->libvision)->imagePath);	
+		return ot;
+	} 
+	else if (strcmp(key, "patternImagePath") == 0) {
+		mrb_value ot = mrb_str_new_cstr(mrb, CLibVision_params(p_data->libvision)->patternImagePath);	
+		return ot;
+	} 
+	else if (strcmp(key, "colorRange") == 0) {
+		mrb_value ary_color = mrb_ary_new_capa(mrb, 6);
+		for (int i = 0; i < 6; i++) {
+			mrb_value ot = mrb_fixnum_value(CLibVision_params(p_data->libvision)->colorRange[i]);	
+			mrb_ary_push(mrb, ary_color, ot);
+		}
+		return ary_color;
+	} 
+	else if (strcmp(key, "cameraFrameSize") == 0) {
+		mrb_value ary_cam = mrb_ary_new_capa(mrb, 2);
+		for (int i = 0; i < 2; i++) {
+			mrb_value ot = mrb_fixnum_value(CLibVision_params(p_data->libvision)->cameraFrameSize[i]);	
+			mrb_ary_push(mrb, ary_cam, ot);
+		}
+		return ary_cam;
+	}
+	else if (strcmp(key, "otsuThresh") == 0) {
+		mrb_int ot = CLibVision_params(p_data->libvision)->otsuThresh;	
+		return mrb_fixnum_value(ot);
+	}
+	else if (strcmp(key, "adptThreshSize") == 0) {
+		mrb_int ot = CLibVision_params(p_data->libvision)->adptThreshSize;	
+		return mrb_fixnum_value(ot);
+	}
+	else if (strcmp(key, "adptThreshMean") == 0) {
+		mrb_int ot = CLibVision_params(p_data->libvision)->adptThreshMean;	
+		return mrb_fixnum_value(ot);
+	}
+	else if (strcmp(key, "polygonsFounds") == 0) {
+		mrb_int pf_size = CLibVision_params(p_data->libvision)->polygonsFounds;
+		mrb_value pf_founds = mrb_ary_new_capa(mrb, pf_size);
+		for (int i = 0; i < pf_size; i++) {
+			mrb_int spf_size = CLibVision_params(p_data->libvision)->polygons[i].numberOfPoints;
+			mrb_value spf_founds = mrb_ary_new_capa(mrb, spf_size);
+			for (int j = 0; j < spf_size; j++) {
+				mrb_value points = mrb_ary_new_capa(mrb, 2);
+				mrb_value px = mrb_fixnum_value(CLibVision_params(p_data->libvision)->polygons[i].polyPoints[j].x);
+				mrb_value py = mrb_fixnum_value(CLibVision_params(p_data->libvision)->polygons[i].polyPoints[j].y);
+				mrb_ary_push(mrb, points, px);
+				mrb_ary_push(mrb, points, py);
+				mrb_ary_push(mrb, spf_founds, points);
+			}
+			mrb_ary_push(mrb, pf_founds, spf_founds);
+		}
+		return pf_founds;
+	}
+	return self;
 }
 
 /*
@@ -185,20 +295,18 @@ mrb_value mrb_params_adptThreshSize(mrb_state *mrb, mrb_value self) {
 */
 
 void mrb_mruby_libvision_gem_init(mrb_state *mrb) {
-  	struct RClass *libvision, *params;
+  	struct RClass *libvision;
   	mrb_define_class(mrb, "LibVisionError", mrb_class_get(mrb, "Exception"));
   	libvision = mrb_define_class(mrb, "LibVision", mrb->object_class);
 
   	mrb_define_method(mrb, libvision, "initialize", mrb_libvision_initialize, MRB_ARGS_NONE());
     
-  	mrb_define_method(mrb, libvision, "execute", mrb_libvision_execute, MRB_ARGS_REQ(2));
+  	mrb_define_method(mrb, libvision, "execute", mrb_libvision_execute, MRB_ARGS_REQ(1));
 	
-	// Every instance of libvision has a params struct
-    params = mrb_define_class(mrb, "Params", mrb->object_class);
-    MRB_SET_INSTANCE_TT(params, MRB_TT_DATA);
-    mrb_define_method(mrb, params, "adptThreshSize", mrb_params_adptThreshSize, MRB_ARGS_NONE());
-    mrb_define_method(mrb, params, "otsuThresh", mrb_params_otsuThresh, MRB_ARGS_NONE());
-    mrb_define_method(mrb, params, "initialize", mrb_params_init, MRB_ARGS_REQ(2));
+	mrb_define_method(mrb, libvision, "set_value4key", mrb_libvision_set_value_for_key, MRB_ARGS_REQ(1));
+	
+	mrb_define_method(mrb, libvision, "get_value4key", mrb_libvision_get_value_for_key, MRB_ARGS_REQ(1));
+	
 }
 
 void mrb_mruby_libvision_gem_final(mrb_state *mrb) {}

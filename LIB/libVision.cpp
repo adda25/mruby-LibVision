@@ -163,6 +163,9 @@ void LibVision::preprocessingFrameOTSU() {
 	}
 	if(lbParams->otsuThresh < 0 || lbParams->otsuThresh > 255) {
 		lbParams->otsuThresh = DEFAULT_OTSU_THRESH;
+		#if DEBUG_MODE
+		LIB_VISION_DPRINT("preprocessingFrameOTSU -> otsu thresh set to default");
+		#endif
 	}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::threshold(lastGrayFrame,
@@ -184,6 +187,9 @@ void LibVision::preprocessingFrameADPT() {
 	}
 	if(lbParams->adptThreshSize < 3) {
 		lbParams->adptThreshSize = DEFAULT_ADPT_SIZE;
+		#if DEBUG_MODE	
+		LIB_VISION_DPRINT("preprocessingFrameADPT -> adpt size set to default");
+		#endif
 	}
 	cv::cvtColor(this->lastFrame, this->lastGrayFrame, CV_RGBA2GRAY);
     cv::adaptiveThreshold(lastGrayFrame,
@@ -403,7 +409,7 @@ void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) 
 	#endif
 }
 
-///// REMOVE??
+///// REMOVE
 void LibVision::checkWithImage() {
 	/*std::vector<std::vector<cv::Point> > newCandidates;
 		
@@ -415,7 +421,7 @@ void LibVision::checkWithImage() {
 	this->candidates = newCandidates;*/
 }
 
-///// REMOVE??
+///// REMOVE
 bool LibVision::checkTextureForRegion(std::vector<cv::Point> candidate) {
 	return false;
 }
@@ -424,7 +430,7 @@ void LibVision::checkColor() {
 	std::vector<std::vector<cv::Point> > newCandidates;
 	cv::Scalar minCol = cv::Scalar(lbParams->colorRange[0], lbParams->colorRange[1], lbParams->colorRange[2]);
 	cv::Scalar maxCol = cv::Scalar(lbParams->colorRange[3], lbParams->colorRange[4], lbParams->colorRange[5]);
-	
+	std::cout << "DEBUG COLOR RANGE: " << minCol << " " << maxCol << std::endl;
 	for(size_t i = 0; i < this->candidates.size(); i++) {
 		if (checkColorForRegion(candidates[i], minCol, maxCol)) {
 			newCandidates.push_back(candidates[i]);
