@@ -39,6 +39,7 @@ LibVision::LibVision() {
 	this->lbFunctions.insert(std::make_pair("holdOnlyRightColored", &LibVision::checkColor));
 	this->lbFunctions.insert(std::make_pair("saveCandidates",	 	&LibVision::saveCandidates));
 	this->lbFunctions.insert(std::make_pair("clearCandidates",	 	&LibVision::clearCandidates));
+	this->lbFunctions.insert(std::make_pair("drawCandidates",	 	&LibVision::drawAllCandidates));
 	// Lookup table debug functions
 	this->lbFunctions.insert(std::make_pair("printPolygonsFounds",	&LibVision::debugPrintPolys));
 	this->lbFunctions.insert(std::make_pair("printMethods",			&LibVision::debugPrintMethods));
@@ -120,6 +121,7 @@ void LibVision::acquireFrame() {
 	}
 	this->camera->grab();
 	this->camera->retrieve(this->lastFrame);
+	this->opFrame = this->lastFrame;
 }
 
 void LibVision::saveFrame() {
@@ -132,7 +134,8 @@ void LibVision::saveFrame() {
       #endif
 	  return;
 	}
-	cv::imwrite(this->lbParams->savedImagePath, this->lastFrame);
+	std::cout << "Saved path: " << this->lbParams->savedImagePath << std::endl;
+	cv::imwrite(this->lbParams->savedImagePath, this->opFrame);
 }
 
 void LibVision::loadImageFromMemory() {
@@ -152,6 +155,7 @@ void LibVision::loadImageFromMemory() {
 		#endif
 		return;
 	}
+	this->lastFrame.copyTo(this->opFrame);
 }
 
 void LibVision::preprocessingFrameOTSU() {
@@ -391,24 +395,28 @@ void LibVision::clearCandidates() {
 	for (int i = 0; i < lbParams->polygonsFounds; i++) {
 		free(lbParams->polygons[i].polyPoints);
 	}
+	if (lbParams->polygonsFounds == 0) {
+		return;
+	}
 	free(lbParams->polygons);
 	lbParams->polygonsFounds = 0;
 }
 
 void LibVision::drawCandidates(std::vector<std::vector<cv::Point> > candidates) {
-    cv::Mat frameCopy;
+	cv::Mat temp;
 	if (this->lastFrame.rows == 0 || this->lastFrame.cols == 0) {
 		return;
 	}
-    this->lastFrame.copyTo(frameCopy);
+    this->lastFrame.copyTo(temp);
 	for(int i = 0; i < candidates.size(); i++) {
 		for(int j = 0; j < candidates[i].size() - 1; j++) {
-			cv::line(frameCopy, candidates[i][j], candidates[i][j+1], cv::Scalar(0, 0, 255), 2);
+			cv::line(temp, candidates[i][j], candidates[i][j+1], cv::Scalar(0, 0, 255), 2);
 		}
-		cv::line(frameCopy, candidates[i][candidates[i].size() - 1], candidates[i][0], cv::Scalar(0, 0, 255), 2);
+		cv::line(temp, candidates[i][candidates[i].size() - 1], candidates[i][0], cv::Scalar(0, 0, 255), 2);
 	}
+	temp.copyTo(opFrame);
 	#if DEBUG_WITH_IMAGES
-	showImageForDebug(frameCopy);
+	showImageForDebug(temp);
 	#endif
 }
 

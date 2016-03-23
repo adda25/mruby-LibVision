@@ -110,7 +110,6 @@ static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
     mrb_libvision_get_data(mrb, self, &p_data); 
 	
 	int arr_size = RARRAY_LEN(ary_in);
-	//p_data->ary = (double *)malloc(sizeof(double) * p_data->i);
 	char* functions[arr_size];
 	for (int i = 0; i < arr_size; i++) {
 		mrb_value elem = mrb_ary_entry(ary_in, i);
@@ -153,15 +152,15 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 	if (strcmp(key, "imagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
-			char* value = mrb_str_to_cstr(mrb, mvalue);
-			CLibVision_params(p_data->libvision)->imagePath = value;	
+			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);
+			clvParams_ptr->imagePath = mrb_str_to_cstr(mrb, mvalue);	
 		}
 	} 
 	else if (strcmp(key, "savedImagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
-			char* value = mrb_str_to_cstr(mrb, mvalue);
-			CLibVision_params(p_data->libvision)->savedImagePath = value;	
+			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);	
+			clvParams_ptr->savedImagePath = mrb_str_to_cstr(mrb, mvalue);;	
 		}
 	} 
 	else if (strcmp(key, "patternImagePath") == 0) {

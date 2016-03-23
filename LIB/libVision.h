@@ -195,6 +195,7 @@ private:
 	cv::Mat lastFrame;
 	cv::Mat lastGrayFrame;
 	cv::Mat lastThrFrame;
+	cv::Mat opFrame;
 	
 	// In candidates is stored the last candidate
 	// found by the LibVision. A new function call
@@ -217,6 +218,10 @@ private:
 	int	calcCorrelationCoefficient(cv::Mat src, cv::Mat img, int* rot);
 	cv::Mat	getWarpPerspective(cv::Mat roi, std::vector<cv::Point> candidate);
 	cv::Mat thresholdAfterWarp(cv::Mat roi);
+	
+	void drawAllCandidates() {
+		this->drawCandidates(this->candidates);
+	}
 	
 	void showImageForDebug(cv::Mat image, int time = DEFAULT_IMAGE_SLEEP_TIME_MS) {
 		cv::namedWindow("test", CV_WINDOW_NORMAL);
