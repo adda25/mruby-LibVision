@@ -5,7 +5,7 @@
 #define DEBUG_MODE 1
 #endif
 #ifndef DEBUG_WITH_IMAGES
-#define DEBUG_WITH_IMAGES 1
+#define DEBUG_WITH_IMAGES 0
 #endif
 
 //////////////////////////////
@@ -51,6 +51,8 @@ typedef struct
 	char* imagePath;
 	// Path of the image used for check ROI texture
 	char* patternImagePath;
+	// Saved frame path
+	char* savedImagePath; 
 	
 	// Always _six_ elements.
 	// This is the range used to 

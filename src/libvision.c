@@ -157,6 +157,13 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 			CLibVision_params(p_data->libvision)->imagePath = value;	
 		}
 	} 
+	else if (strcmp(key, "savedImagePath") == 0) {
+		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
+		if (mrb_string_p(mvalue)) {
+			char* value = mrb_str_to_cstr(mrb, mvalue);
+			CLibVision_params(p_data->libvision)->savedImagePath = value;	
+		}
+	} 
 	else if (strcmp(key, "patternImagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
@@ -230,6 +237,10 @@ static mrb_value mrb_libvision_get_value_for_key(mrb_state *mrb, mrb_value self)
 	// Fetch values
 	if (strcmp(key, "imagePath") == 0) {
 		mrb_value ot = mrb_str_new_cstr(mrb, CLibVision_params(p_data->libvision)->imagePath);	
+		return ot;
+	} 
+	else if (strcmp(key, "savedImagePath") == 0) {
+		mrb_value ot = mrb_str_new_cstr(mrb, CLibVision_params(p_data->libvision)->savedImagePath);	
 		return ot;
 	} 
 	else if (strcmp(key, "patternImagePath") == 0) {

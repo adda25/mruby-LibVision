@@ -124,12 +124,15 @@ void LibVision::acquireFrame() {
 
 void LibVision::saveFrame() {
 	#if DEBUG_MODE
-	LIB_VISION_DPRINT("saveFrame is not implemented yet");
+	LIB_VISION_DPRINT("saveFrame");
 	#endif
-	/*if (_rect) {
-	 cv::rectangle(_lastFrame, cv::Point(_rect->x0, _rect->y0), cv::Point(_rect->x1, _rect->y1), cv::Scalar(0, 255, 0));
-	  }
-	 imwrite(name, _lastFrame);*/
+	if (this->lbParams->savedImagePath == NULL) {
+      #if DEBUG_MODE
+      LIB_VISION_DPRINT("saveFrame: savedImagePath is NULL --> return");
+      #endif
+	  return;
+	}
+	cv::imwrite(this->lbParams->savedImagePath, this->lastFrame);
 }
 
 void LibVision::loadImageFromMemory() {
