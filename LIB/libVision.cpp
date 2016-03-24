@@ -50,21 +50,53 @@ LibVision::LibVision() {
 	#endif
 	
 	// Alloc lbParams
-	this->lbParams = newLbParams();
+	//this->lbParams = newLbParams();
+	initParams();
+}
+
+LibVision::~LibVision() {
+	//this->clearCandidates();
+	//free (this->lbParams->colorRange);
+	//free (this->lbParams);
+	#if DEBUG_MODE
+	std::cout << "LibVision::deinit" << std::endl;
+	#endif
+}
+
+void LibVision::initParams() {
+    this->lbParams = (LibVisionParams*)malloc(sizeof(LibVisionParams));
 	if (this->lbParams == NULL) {
 		#if DEBUG_MODE
 		std::cout << "LibVision-> alloc lbParams fails at: " << __LINE__  << std::endl;
 		#endif
 	}
+	this->lbParams->imagePath = (char*)malloc(256 * sizeof(char));
+	// Saved frame path
+	this->lbParams->savedImagePath = (char*)malloc(256 * sizeof(char));
+    // Alloc LibVisionParams colorRange
+    /*this->lbParams->colorRange = (int*)malloc(0 * sizeof (int));
+    if (this->lbParams->colorRange == NULL) {
+        free (this->lbParams->colorRange);
+    }
+	static const int defaultColorRange[6] = {0, 0, 0, 10, 10, 10}; // Black
+	memcpy(this->lbParams->colorRange, defaultColorRange, sizeof(defaultColorRange));
 	
-	// Set Raspberry camera
-	this->lbParams->cameraIsAvailable = FALSE;
-}
+	// Alloc LibVisionParams polygons
+	this->lbParams->polygonsFounds = 0;
+	this->lbParams->polygons = (Polygon*)malloc(0 * sizeof (Polygon));
+	if (this->lbParams->polygons == NULL) {
+		free(this->lbParams->polygons);
+	}
+	this->lbParams->polygons[0].numberOfPoints = 0;
+	this->lbParams->polygons[0].polyPoints = (ScreenPoint*)malloc(0 * sizeof (ScreenPoint));
+		
+	// Default params
+	this->lbParams->otsuThresh 		= 130;
+	this->lbParams->adptThreshSize 	= 7;
+	this->lbParams->adptThreshMean 	= 7;
 
-LibVision::~LibVision() {
-	#if DEBUG_MODE
-	std::cout << "LibVision::deinit" << std::endl;
-	#endif
+	// Set Raspberry camera
+	this->lbParams->cameraIsAvailable = FALSE;*/
 }
 
 void LibVision::requireOperations(char* operations[], size_t size) {

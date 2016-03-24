@@ -48,8 +48,9 @@ typedef struct { CLibVision_ptr libvision; } libvision_data_s;
 // Check it with GC.start
 static void libvision_data_destructor(mrb_state *mrb, void *p_) {
 	libvision_data_s *pd = (libvision_data_s *)p_;
-  	CLibVision_deinit(pd->libvision);
-  	free(pd);
+  //mrb_free(mrb, CLibVision_params(pd->libvision));
+  CLibVision_deinit(pd->libvision);
+  free(pd);
 };
 
 // Creating data type and reference for GC, in a const struct
@@ -59,12 +60,12 @@ const struct mrb_data_type libvision_data_type = {"libvision_data",
 // Utility function for getting the struct out of the wrapping IV @data
 static void mrb_libvision_get_data(mrb_state *mrb, mrb_value self, libvision_data_s **data) {
 	mrb_value data_value;
-  	data_value = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@data"));
+  data_value = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "@data"));
 
-  	// Loading data from data_value into p_data:
-  	Data_Get_Struct(mrb, data_value, &libvision_data_type, *data);
-  	if (!*data)
-    	mrb_raise(mrb, E_RUNTIME_ERROR, "Could not access @data");
+  // Loading data from data_value into p_data:
+  Data_Get_Struct(mrb, data_value, &libvision_data_type, *data);
+  if (!*data)
+    mrb_raise(mrb, E_RUNTIME_ERROR, "Could not access @data");
 }
 
 // Data Initializer C function (not exposed!)
@@ -81,7 +82,6 @@ static void mrb_libvision_init(mrb_state *mrb, mrb_value self) {
   	// Allocate and zero-out the data struct:
   	p_data = (libvision_data_s *)malloc(sizeof(libvision_data_s));
 
-  	// memset(p_data, 0, sizeof(raspicam_data_s));
   	if (!p_data)
     	mrb_raise(mrb, E_RUNTIME_ERROR, "Could not allocate @data");
 
@@ -96,31 +96,35 @@ static void mrb_libvision_init(mrb_state *mrb, mrb_value self) {
 }
 
 static mrb_value mrb_libvision_initialize(mrb_state *mrb, mrb_value self) {
-  	// Call strcut initializer:
-  	mrb_libvision_init(mrb, self);
-    return mrb_nil_value();
+  // Call strcut initializer:
+  mrb_libvision_init(mrb, self);
+  return mrb_nil_value();
 }
 
 static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
 	mrb_value ary_in = mrb_nil_value();
 	libvision_data_s *p_data = NULL;
+	mrb_int i, arr_size;
+	char **functions = NULL;
 	mrb_get_args(mrb, "A", &ary_in);
-
+  
 	// call utility for unwrapping @data into p_data:
-    mrb_libvision_get_data(mrb, self, &p_data); 
+  mrb_libvision_get_data(mrb, self, &p_data); 
 	
-	int arr_size = RARRAY_LEN(ary_in);
-	char* functions[arr_size];
-	for (int i = 0; i < arr_size; i++) {
-		mrb_value elem = mrb_ary_entry(ary_in, i);
-	    if (mrb_string_p(elem)) {
-	    	functions[i] = mrb_str_to_cstr(mrb, elem);
+	arr_size = RARRAY_LEN(ary_in);
+	functions = mrb_calloc(mrb, arr_size, sizeof(char *));
+	for (i = 0; i < arr_size; i++) {
+    mrb_value elem = mrb_ary_ref(mrb, ary_in, i);
+		if (mrb_string_p(elem)) {
+    	//int arena_idx = mrb_gc_arena_save(mrb);
+    	//mrb_gc_arena_restore(mrb, arena_idx);
+      functions[i] = mrb_string_value_cstr(mrb, &elem);;
 		} else {
-  	      	//mrb_raisef(mrb, E_RUNTIME_ERROR, "Non-string entry at position %S", mrb_string_value(i));
-  	   	}
-	}
-	
-  	CLibVision_requireOperations(p_data->libvision, functions, arr_size);
+      mrb_raisef(mrb, E_RUNTIME_ERROR, "Non-string entry at position %S", elem);
+		}
+  }
+  CLibVision_requireOperations(p_data->libvision, functions, arr_size);
+	mrb_free(mrb, functions);
 	return self;
 }
 
@@ -131,7 +135,8 @@ static mrb_value mrb_libvision_execute(mrb_state *mrb, mrb_value self) {
 |  __/ (_| | | | (_| | | | | | \__ \___) | |_| |  | |_| | (__| |_ 
 |_|   \__,_|_|  \__,_|_| |_| |_|___/____/ \__|_|   \__,_|\___|\__|
                          
-*/                                         
+*/   
+                                   
 static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self) {
 	mrb_value ary_in = mrb_nil_value();
 	
@@ -142,32 +147,32 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 	// Fetch key
 	char *key;
 	mrb_value elem = mrb_ary_entry(ary_in, 0);
-    if (mrb_string_p(elem)) {
-		key = mrb_str_to_cstr(mrb, elem);
-	} else {
-		return self;
-	}
+  if (mrb_string_p(elem)) {
+		key = mrb_string_value_cstr(mrb, &elem);
+  } else {
+    return self;
+  }
 	
 	// Fetch values
 	if (strcmp(key, "imagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
 			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);
-			clvParams_ptr->imagePath = mrb_str_to_cstr(mrb, mvalue);	
+			clvParams_ptr->imagePath = mrb_string_value_cstr(mrb, &mvalue);
 		}
 	} 
 	else if (strcmp(key, "savedImagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
 			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);	
-			clvParams_ptr->savedImagePath = mrb_str_to_cstr(mrb, mvalue);;	
+      clvParams_ptr->savedImagePath = mrb_string_value_cstr(mrb, &mvalue);	
 		}
 	} 
 	else if (strcmp(key, "patternImagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
-			char* value = mrb_str_to_cstr(mrb, mvalue);
-			CLibVision_params(p_data->libvision)->patternImagePath = value;	
+			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);
+			clvParams_ptr->patternImagePath = mrb_string_value_cstr(mrb, &mvalue);
 		}
 	} 
 	else if (strcmp(key, "colorRange") == 0) {
@@ -178,7 +183,8 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 		for (int i = 1; i < arr_size; i++) {
 			mrb_value elem = mrb_ary_entry(ary_in, i);
 		    if (mrb_fixnum_p(elem)) {
-				CLibVision_params(p_data->libvision)->colorRange[i-1] = mrb_to_flo(mrb, elem);; 
+				CLibVision_params(p_data->libvision)->colorRange[i-1] = mrb_to_flo(mrb, elem);
+
 			}	
 		}
 	} 
@@ -295,6 +301,9 @@ static mrb_value mrb_libvision_get_value_for_key(mrb_state *mrb, mrb_value self)
 	return self;
 }
 
+static mrb_value mrb_libvision_test_debug(mrb_state *mrb, mrb_value self) {
+  return self;
+}
 /*
  ___       _ _    ____                
 |_ _|_ __ (_) |_ / ___| ___ _ __ ___  
@@ -311,12 +320,13 @@ void mrb_mruby_libvision_gem_init(mrb_state *mrb) {
 
   	mrb_define_method(mrb, libvision, "initialize", mrb_libvision_initialize, MRB_ARGS_NONE());
     
-  	mrb_define_method(mrb, libvision, "execute", mrb_libvision_execute, MRB_ARGS_REQ(1));
+    mrb_define_method(mrb, libvision, "execute", mrb_libvision_execute, MRB_ARGS_REQ(1));
 	
-	mrb_define_method(mrb, libvision, "set_value4key", mrb_libvision_set_value_for_key, MRB_ARGS_REQ(1));
+	  mrb_define_method(mrb, libvision, "set_value4key", mrb_libvision_set_value_for_key, MRB_ARGS_REQ(1));
 	
-	mrb_define_method(mrb, libvision, "get_value4key", mrb_libvision_get_value_for_key, MRB_ARGS_REQ(1));
-	
+	  mrb_define_method(mrb, libvision, "get_value4key", mrb_libvision_get_value_for_key, MRB_ARGS_REQ(1));
+    
+    mrb_define_method(mrb, libvision, "testDebug", mrb_libvision_test_debug, MRB_ARGS_NONE());
 }
 
 void mrb_mruby_libvision_gem_final(mrb_state *mrb) {}

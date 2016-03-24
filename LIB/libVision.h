@@ -1,3 +1,5 @@
+#include <string.h>
+
 #ifndef SHOW_INFO
 #define SHOW_INFO 1
 #endif
@@ -68,41 +70,6 @@ typedef struct
 	
 } LibVisionParams;
 
-
-/// Init and alloc a new 
-/// LibVisionParams. Alloc here
-/// your custom parameters if needed
-LibVisionParams* newLbParams() {
-    // Alloc LibVisionParams
-    LibVisionParams *params =(LibVisionParams*)malloc(sizeof(LibVisionParams));
-    if (params == NULL) {return NULL;}
-
-    // Alloc LibVisionParams colorRange
-    params->colorRange = (int*)malloc(0 * sizeof (int));
-    if (params->colorRange == NULL) {
-        free (params->colorRange);
-        return NULL;
-    }
-	static const int defaultColorRange[6] = {0, 0, 0, 10, 10, 10}; // Black
-	memcpy(params->colorRange, defaultColorRange, sizeof(defaultColorRange));
-	
-	// Alloc LibVisionParams polygons
-	params->polygonsFounds = 0;
-	params->polygons = (Polygon*)malloc(0 * sizeof (Polygon));
-	if (params->polygons == NULL) {
-		free(params->polygons);
-		return NULL;
-	}
-	params->polygons[0].numberOfPoints = 0;
-	params->polygons[0].polyPoints = (ScreenPoint*)malloc(0 * sizeof (ScreenPoint));
-		
-	// Default params
-	params->otsuThresh 		= 130;
-	params->adptThreshSize 	= 7;
-	params->adptThreshMean 	= 7;
-	
-    return params;
-}
 	
 #ifdef __cplusplus
 #include <stdlib.h>
@@ -164,6 +131,8 @@ public:
 private:
 	std::map<std::string, LibVisionFunction> lbFunctions;
 	
+	
+	void initParams();
    	//	 _     _     _____                 _   _                 
    	//	| |   | |__ |  ___|   _ _ __   ___| |_(_) ___  _ __  ___ 
    	//	| |   | '_ \| |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
