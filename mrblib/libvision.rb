@@ -23,4 +23,20 @@
 
 class LibVision
 
+  def method_missing name, *args, &block
+    n = name.to_s
+    case n
+    when "loadImageFromMem"
+      set_value4key(["imagePath", args.first])
+      execute([n])
+    when "saveFrame"
+      set_value4key(["savedImagePath", args.first])
+      execute([n])
+    when "patternImagePath"
+      set_value4key([n, args.first])
+    else
+      execute([n])
+    end
+  end
+  
 end

@@ -19,7 +19,6 @@ for ip in 0..1500
   $lb.execute(["detectCircles"])
   $lb.execute(["drawCandidates"])
   $lb.testDebug
-  #i = kkk + 1
   puts ip
 end
 puts "END PUTS"
