@@ -4,7 +4,7 @@
 # with some computer vision functionality.                                # 
 # Copyright (C) 2016 Amedeo Setti,                                        #
 # amedeo[dot]setti[at]unitn.it                                            #
-# Original gem by Paolo Bosetti at                                        #
+# Original project by Paolo Bosetti at                                    #
 # https://github.com/UniTN-Mechatronics/mruby-raspicam                    #
 # paolo[dot]bosetti[at]unitn.it                                           #
 # Department of Industrial Engineering, University of Trento              #

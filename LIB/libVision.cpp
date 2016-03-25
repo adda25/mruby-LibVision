@@ -74,7 +74,7 @@ void LibVision::initParams() {
 	// Saved frame path
 	this->lbParams->savedImagePath = (char*)malloc(256 * sizeof(char));
     // Alloc LibVisionParams colorRange
-    /*this->lbParams->colorRange = (int*)malloc(0 * sizeof (int));
+    this->lbParams->colorRange = (int*)malloc(6 * sizeof (int));
     if (this->lbParams->colorRange == NULL) {
         free (this->lbParams->colorRange);
     }
@@ -83,12 +83,12 @@ void LibVision::initParams() {
 	
 	// Alloc LibVisionParams polygons
 	this->lbParams->polygonsFounds = 0;
-	this->lbParams->polygons = (Polygon*)malloc(0 * sizeof (Polygon));
+	/*this->lbParams->polygons = (Polygon*)malloc(1 * sizeof (Polygon));
 	if (this->lbParams->polygons == NULL) {
 		free(this->lbParams->polygons);
-	}
-	this->lbParams->polygons[0].numberOfPoints = 0;
-	this->lbParams->polygons[0].polyPoints = (ScreenPoint*)malloc(0 * sizeof (ScreenPoint));
+	}*/
+	//this->lbParams->polygons[0].numberOfPoints = 0;
+	//this->lbParams->polygons[0].polyPoints = (ScreenPoint*)malloc(1 * sizeof (ScreenPoint));
 		
 	// Default params
 	this->lbParams->otsuThresh 		= 130;
@@ -96,7 +96,7 @@ void LibVision::initParams() {
 	this->lbParams->adptThreshMean 	= 7;
 
 	// Set Raspberry camera
-	this->lbParams->cameraIsAvailable = FALSE;*/
+	this->lbParams->cameraIsAvailable = FALSE;
 }
 
 void LibVision::requireOperations(char* operations[], size_t size) {

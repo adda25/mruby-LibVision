@@ -41,7 +41,9 @@
 #define E_LIBVISION_ERROR (mrb_class_get(mrb, "LibVisionError"))
 
 // Struct holding data:
-typedef struct { CLibVision_ptr libvision; } libvision_data_s;
+typedef struct { 
+  CLibVision_ptr libvision; 
+} libvision_data_s;
 
 // Garbage collector handler, for libvision_data struct
 // if libvision_data contains other dynamic data, free it too!
@@ -157,15 +159,19 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 	if (strcmp(key, "imagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
+      static char imagePath[256];
+      strcpy(imagePath, mrb_string_value_cstr(mrb, &mvalue));
 			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);
-			clvParams_ptr->imagePath = mrb_string_value_cstr(mrb, &mvalue);
+			clvParams_ptr->imagePath = imagePath;
 		}
 	} 
 	else if (strcmp(key, "savedImagePath") == 0) {
 		mrb_value mvalue = mrb_ary_entry(ary_in, 1);
 		if (mrb_string_p(mvalue)) {
+      static char savedImagePath[256];
+      strcpy(savedImagePath, mrb_string_value_cstr(mrb, &mvalue));
 			LibVisionParams* clvParams_ptr = CLibVision_params(p_data->libvision);	
-      clvParams_ptr->savedImagePath = mrb_string_value_cstr(mrb, &mvalue);	
+      clvParams_ptr->savedImagePath = savedImagePath;	
 		}
 	} 
 	else if (strcmp(key, "patternImagePath") == 0) {
@@ -184,7 +190,6 @@ static mrb_value mrb_libvision_set_value_for_key(mrb_state *mrb, mrb_value self)
 			mrb_value elem = mrb_ary_entry(ary_in, i);
 		    if (mrb_fixnum_p(elem)) {
 				CLibVision_params(p_data->libvision)->colorRange[i-1] = mrb_to_flo(mrb, elem);
-
 			}	
 		}
 	} 
